@@ -1,0 +1,71 @@
+import React, { useState } from 'react';
+import axios from 'axios';
+
+const App = () => {
+  const [date, setDate] = useState('');
+  const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
+  const [receipt, setReceipt] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const handleReceiptSubmit = async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData();
+    formData.append('date', date);
+    formData.append('amount', amount);
+    formData.append('description', description);
+    formData.append('receipt', receipt);
+	console.log("Form Data:", formData);
+
+
+    try {
+      const response = await axios.post('http://localhost:5000/api/receipts', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      // Success
+      console.log(response.data);
+      alert('Receipt submitted successfully!');
+    } catch (error) {
+      // Error handling
+      console.error('Error submitting receipt:', error);
+      setErrorMessage('Error submitting receipt');
+    }
+  };
+
+  return (
+    <div className="App">
+      <form onSubmit={handleReceiptSubmit}>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          required
+        />
+        <input
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          required
+        />
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          required
+        />
+        <input
+          type="file"
+          onChange={(e) => setReceipt(e.target.files[0])}
+          required
+        />
+        <button type="submit">Submit Receipt</button>
+      </form>
+      {errorMessage && <p>{errorMessage}</p>}
+    </div>
+  );
+};
+
+export default App;

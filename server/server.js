@@ -1,0 +1,80 @@
+const express = require('express');
+const cors = require('cors');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');  // Added for checking the uploads directory
+
+const app = express();
+
+// CORS configuration: specify origin (optional, more secure than allowing all)
+const allowedOrigins = ['http://localhost:3000'];  // Frontend URL
+app.use(cors({
+  origin: '*', // Allow all origins temporarily
+  methods: 'GET,POST',
+  allowedHeaders: 'Content-Type,Authorization'
+}));
+
+// Ensure the 'uploads' directory exists
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Setup multer storage (for file uploads)
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir); // Store in 'uploads/' directory
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname)); // Unique file name based on timestamp
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    // Allow only image files (optional but a good practice)
+    const fileTypes = /jpeg|jpg|png|gif/;
+    const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = fileTypes.test(file.mimetype);
+    
+    if (extname && mimetype) {
+      return cb(null, true);
+    } else {
+      return cb(new Error('Only image files are allowed'), false);
+    }
+  },
+  limits: { fileSize: 5 * 1024 * 1024 } // Limit file size to 5MB (optional)
+});
+
+// Middleware to handle JSON request bodies
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// API route to handle receipt submission
+app.post('/api/receipts', upload.single('receipt'), (req, res) => {
+  console.log(req.body); // Access form data
+  console.log(req.file); // Access uploaded file
+
+  // Extract data from the request body
+  const { date, amount, description } = req.body;
+  const receiptFile = req.file; // This will be the uploaded file
+
+  // Simple validation check
+  if (!date || !amount || !description || !receiptFile) {
+    return res.status(400).json({ error: 'All fields (date, amount, description, receipt) are required' });
+  }
+   console.log('Receipt saved successfully:', { date, amount, description, receiptFile });
+
+  // For simplicity, let's just return the submitted data as a success response
+  return res.status(200).json({
+    message: 'Receipt submitted successfully!',
+    data: { date, amount, description, receiptFile }
+  });
+});
+
+// Start the server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
